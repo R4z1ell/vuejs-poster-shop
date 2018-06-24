@@ -1,5 +1,6 @@
 <!doctype html>
 <html lang="en">
+
 <head>
     <meta charset="utf-8">
     <meta name="referrer" content="never" />
@@ -13,27 +14,101 @@
     <!-- CSS -->
     <link rel="stylesheet" type="text/css" href="public/style.css">
 </head>
+
 <body>
-<div id="app">
-    <div class="header">
-        <h1>Vue.js Poster Store</h1>
-    </div>
-    <div class="main">
-        <div class="products">
-            <p>Products go here.</p>
+    <!-- This 'v-cloak' is a selector we've added inside our 'style.css' file that set the 'display' property to
+    none untill Vue.js is COMPLETELY loaded, then it will REMOVE this 'v-cloak' class and the page will load
+    normally(this was for fixing a rendering problem with slow connection) -->
+    <div id="app" v-cloak>
+        <div class="header">
+            <h1>Vue.js Poster Store</h1>
+            <!-- Here below we're using the 'v-on' DIRECTIVE, followed by the 'submit' ARGUMENT and the 'prevent'
+            EVENT MODIFIER, that will prevent the classic auto-reload of the page when the form gets submitted -->
+            <form class="searchbar" v-on:submit.prevent="onSubmit">
+                <input v-model="newSearch" placeholder="Search for posters">
+                <input type="submit" value="Search" class="btn">
+            </form>
         </div>
-        <div class="cart">
-            <h2>Shopping Cart</h2>
-            <div>
-                No items in the cart.
+        <div class="main">
+            <div class="products">
+                <div v-if="loading">
+                    Loading...
+                </div>
+                <div class="search-results" v-else>
+                    Found {{ results.length }} results for search term {{ lastSearch }}.
+                </div>
+                <div class="product" v-for="(item, index) in items">
+                    <div>
+                        <div class="product-image">
+                            <!-- Here below we're using the 'v-bind' DIRECTIVE to "bind"(legare) the 'src' attribute 
+                            we have available on the 'img' element to the 'item.link', remember that 'item' is the
+                            ALIAS we've assigned above in the 'v-for' directive. In this way we'll be able to add 
+                            the url coming from the 'item.link' INSIDE the 'src' attribute and we'll finally be able
+                            to see the image in the Browser -->
+                            <img v-bind:src="item.link">
+                        </div>
+                    </div>
+                    <div>
+                        <h4 class="product-title"> {{ item.title }}</h4>
+                        <p>Price:
+                            <strong>{{ price | currency }}</strong>
+                        </p>
+                        <button v-on:click="addItem(index)" class="add-to-cart btn">Add to cart</button>
+                    </div>
+                </div>
+                <div id="product-list-bottom">
+                    <div v-if="noMoreItems">No more items.</div>
+                </div>
+            </div>
+            <div class="cart">
+                <h2>Shopping Cart</h2>
+                <!-- The 'transition-group' is used for MULTIPLE elements, instead the 'transition' for just
+                    a SINGLE element. The FIRST thing we need to do to make this work is to ADD a key to EACH 
+                    children and we do this by adding the 'v-bind' directive where we pass the 'key' argument, and
+                    this key MUST be a UNIQUE key, in our case we can use the 'item.id' so a unique id that we have
+                    for EACH one of our items. In the end we're using the tag="ul" to specifically tell Vue.js to
+                    WRAP our 'li' items INSIDE a 'ul' element(by DEFAULT if we DON'T specify the 'tag', our elements
+                    are wrapped inside a 'span' element, and that is NOT what we want because that is not valid HTML
+                    ,we CAN'T have 'li' elements INSIDE a 'span' pretty much, we want our 'li' INSIDE a 'ul' tag) -->
+                <transition-group name="fade" tag="ul">
+                    <li class="cart-item" v-for="item in cart" v-bind:key="item.id">
+                        <div class="item-title">{{ item.title }}</div>
+                        <span class="item-qty">{{ item.price | currency }} x {{ item.qty }}</span>
+                        <button class="btn" v-on:click="inc(item)">+</button>
+                        <button class="btn" v-on:click="dec(item)">-</button>
+                    </li>
+                </transition-group>
+                <!-- This 'transition' Component we'll tell Vue.js to apply and remove certain classes at the
+                APPROPPRIATE time as the element enters or leaves the DOM. Inside our 'style.css' we've added a
+                'fade-enter', 'fade-enter-active' and 'fade-leave-active' classes and BECAUSE we've named this
+                'transition' Component with 'fade'(the value we gave to the 'name' attribute) Vue.js we'll now be
+                able to APPLY these Css classes to this 'transition' Compoment AUTOMATICALLY on the right time -->
+                <transition name="fade">
+                    <!-- When this 'cart.length' is ZERO(so when we don't have NOTHING inside the cart, so when we
+                haven't added anything inside it), the zero in JavaScript(an in other Languages too) gets evaluated
+                to FALSE, so this is the reason why when the 'cart.length' is zero we DON'T see the 'div' element
+                here below into the DOM, BUT as soon as we add an item into the cart this 'div' automatically pops 
+                up, thx to the power of Vue.js -->
+                    <div v-if="cart.length">
+                        <div>Total: {{ total | currency }}</div>
+                    </div>
+                </transition>
+                <div v-if="cart.length === 0" class="empty-cart">
+                    No items in the cart.
+                </div>
             </div>
         </div>
     </div>
-</div>
 
-<!-- Scripts -->
-<script src="/reload/reload.js"></script>
-<script type="text/javascript" src="public/script.js"></script>
+    <!-- Scripts -->
+    <script src="/reload/reload.js"></script>
+    <script src="node_modules/vue/dist/vue.js"></script>
+    <!-- Vue-resource is a Library that will help us with HTML request while using Vue.js, the script NEEDS to come
+    AFTER the 'vue.js' above, it's IMPORTANT -->
+    <script src="node_modules/vue-resource/dist/vue-resource.js"></script>
+    <script src="node_modules/scrollmonitor/scrollMonitor.js"></script>
+    <script type="text/javascript" src="public/script.js"></script>
 
 </body>
+
 </html>
