@@ -1,6 +1,11 @@
 var PRICE = 9.99;
 var LOAD_NUM = 10;
 
+var pusher = new Pusher("be4fd356f00528720add", {
+  cluster: "eu",
+  encrypted: true
+});
+
 /* This below is how we can create a Vue INSTANCE, we use the 'new' keyword followed by the 'Vue' CONSTRUCTOR where
 we pass an OBJECT that will contain all the properties that we may need. The FIRST property that we add will pretty
 much ALWAYS be the 'el'(short for 'element'), with this property we define the ROOT element for Vue, in our case 
@@ -23,7 +28,8 @@ new Vue({
     newSearch: "anime",
     lastSearch: "",
     loading: false,
-    price: PRICE
+    price: PRICE,
+    pusherUpdate: false
   },
   /* 'computed' properties are like a cross(un incrocio) between 'data' properties and 'methods'. Unlike a 'data'
   property a 'computed' property CAN be a Function BUT unlike a normal 'method' Vue.js is going to re-evaluate, so
@@ -35,6 +41,39 @@ new Vue({
       return (
         this.results.length === this.items.length && this.results.length > 0
       );
+    }
+  },
+  /* With this 'watcher' we have the ability to execute "CUSTOM LOGIC" when the CONTENTS of our 'cart' Array CHANGES
+  The next step now is that WHEN that 'cart' CHANGES we want to TAKE the 'state' of the 'cart' and SEND that data
+  to our 'PUSHER'(a website that allow us to control the changes in our cart also if we've MULTIPLE pages opened
+  in the browser and we add or remove stuff from any of those pages, we would see the SAME results reflected on ALL
+  pages */
+  watch: {
+    /* For the properties of this 'watch' Object we have to use the SAME name that we've used in the 'data' above.
+    So in our case we want to WATCH the 'cart' property that we've INSIDE the 'data' Object ABOVE, so HERE we have
+    to use the SAME name for the property of this 'watch' Object, so pretty much the properties of this 'watch'
+    Object NEEDS to be the SAME as the properties we want to WATCH */
+    cart: {
+      /* This 'val' refers to the CURRENT value of the watched Object or Array(in our case the current value of
+      the 'cart' Array of course) */
+      handler: function(val) {
+        if (!this.pusherUpdate) {
+          /* Here we're sending a POST request with the help of the '$http' method of the 'vue-resource' package. 
+        The 'post' will take TWO arguments, the first is the URL where we want our Ajax call to go, and the second
+        argument is the DATA that we want to send along with this POST request, so the 'val' argument we're passing
+        to this 'handler' function that refers to the CURRENT value of the watched 'cart' Array */
+          this.$http.post("/cart_update", val);
+        } else {
+          this.pusherUpdate = false;
+        }
+      },
+      /* By DEFAULT a "watcher" will only WATCH the property itself and NOT the things NESTED inside it, so in our
+      case we were just watching on changes of the 'cart' property itself(that is the Array we've defined in the
+      'data' Object above) but NOT on changes happening to his elements. By setting this 'deep' property to TRUE(by
+      DEFAULT is set to 'false') we're telling Vue that it should ALSO look for the NESTED changes of this 'cart'
+      property. We're doing this so that we can trigger this watcher when we MODIFY by adding or removing elements
+      to the items inside our cart(so when we click on the '+' or '-' buttons) */
+      deep: true
     }
   },
   methods: {
@@ -126,6 +165,15 @@ new Vue({
     var watcher = scrollMonitor.create(elem);
     watcher.enterViewport(function() {
       vueInstance.appendItems();
+    });
+    var channel = pusher.subscribe("cart");
+    channel.bind("update", function(data) {
+      vueInstance.pusherUpdate = true;
+      vueInstance.cart = data;
+      vueInstance.total = 0;
+      for (var i = 0; i < vueInstance.cart.length; i++) {
+        vueInstance.total += PRICE * vueInstance.cart[i].qty;
+      }
     });
   }
 });
